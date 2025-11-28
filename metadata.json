@@ -1,0 +1,5 @@
+{
+  "name": "Oriente Ota117 V4.0.0 (Firebase)",
+  "description": "Applicazione centralizzata per la Loggia 'Dante 117 all'Oriente di Firenze', basata su Firebase per la gestione in tempo reale di eventi, risorse e membri. Dati persistenti e sincronizzati su tutti i dispositivi.",
+  "requestFramePermissions": []
+}
