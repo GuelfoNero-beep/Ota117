@@ -19,11 +19,8 @@ const LoginScreen: React.FC = () => {
     const cleanPassword = password.trim();
 
     try {
-        const user = await login(cleanEmail, cleanPassword);
-        if (!user) {
-          // Questo caso potrebbe non verificarsi se apiLogin lancia sempre un errore
-          setError('Credenziali non valide. Riprova.');
-        }
+        await login(cleanEmail, cleanPassword);
+        // La navigazione avviene in automatico tramite il context
     } catch(err) {
         if (err instanceof FirebaseError) {
             switch(err.code) {
@@ -35,6 +32,9 @@ const LoginScreen: React.FC = () => {
                 case 'auth/invalid-email':
                     setError('Il formato dell\'email non è valido.');
                     break;
+                case 'permission-denied':
+                     setError('Accesso al profilo negato. Contattare l\'amministratore per verificare le autorizzazioni.');
+                     break;
                 default:
                     setError('Si è verificato un errore. Riprova più tardi.');
                     break;

@@ -8,7 +8,7 @@ import { apiLogin, apiLogout } from '../services/firebase';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User | null>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,20 +21,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // Utente loggato su Firebase, ora recupero i dati custom da Firestore
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            ...userData
-          } as User);
-        } else {
-          // L'utente esiste in Auth ma non in Firestore, logout forzato
-          console.error("Dati utente non trovati su Firestore. Logout in corso.");
+        try {
+          // Utente loggato su Firebase, ora recupero i dati custom da Firestore
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              ...userData
+            } as User);
+          } else {
+            // L'utente esiste in Auth ma non in Firestore, logout forzato
+            console.error(`User with UID ${firebaseUser.uid} exists in Auth, but no document found in Firestore 'users' collection.`);
+            await apiLogout();
+            setUser(null);
+          }
+        } catch(e) {
+          console.error("Error fetching user data from Firestore. This is likely a permissions issue. Check your Firestore rules.", e);
           await apiLogout();
           setUser(null);
         }
@@ -48,17 +54,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe(); // Cleanup on unmount
   }, []);
 
-  const login = async (email: string, password: string): Promise<User | null> => {
+  const login = async (email: string, password: string): Promise<void> => {
     setLoading(true);
     try {
-      const loggedInUser = await apiLogin(email, password);
+      await apiLogin(email, password);
       // Lo stato verrà aggiornato automaticamente dal listener onAuthStateChanged
-      return loggedInUser;
+      // setLoading(false) è gestito dal listener
     } catch (error) {
-      console.error(error);
-      return null;
-    } finally {
-      setLoading(false);
+      setLoading(false); // Assicurati di fermare il caricamento in caso di errore
+      throw error; // Rilancia l'errore per gestirlo nella UI
     }
   };
 
